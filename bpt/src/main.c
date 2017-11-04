@@ -53,6 +53,9 @@ int main( int argc, char ** argv ) {
         case 'p':
             print_leaf();
             break;
+        case 'l':
+            page_layout();
+            break; 
         case 'q':
             while (getchar() != (int)'\n');
             return EXIT_SUCCESS;

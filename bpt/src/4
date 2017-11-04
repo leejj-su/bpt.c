@@ -91,31 +91,30 @@ void set_number_of_keys(int64_t page_start_offset,int number) //해당 페이지
 int64_t find_next_offset_of_internal(int offset_,int64_t key) //interpage_offset만이 인자로 들어옴
 {
     int offset=offset_;
-    int offset_return;
     int number_of_keys_at_page;
     int64_t comparekey;
     number_of_keys_at_page=number_of_keys(offset); //기존 key갯수
-    printf("number 0f key : %d\n",number_of_keys_at_page);
-   
+    //printf("number 0f key : %d\n",number_of_keys_at_page);
+    /*
      for(int i=1;i<=number_of_keys_at_page;i++) 
      {
-          pread(fd,&comparekey,8,offset+112+16*i);
-          printf("i: %d  number: %d",i,number_of_keys_at_page);
+          pread(fd,&comparekey,8,112+16*i);
           printf("key : %ld comparekey: %ld \n", key,comparekey);
           if(key<comparekey) //key가 해당되는 범위내의 offset 위치는 i번째이다.
           { 
-               pread(fd,&offset_return,8,offset+112+16*i-8); 
+               pread(fd,&offset,8,112+16*i-8); 
                break;
           }
           if(i==number_of_keys_at_page)
           {
+            printf("right\n");
             printf("before offset : %ld\n",offset);
-            pread(fd,&offset_return,8,offset+112+16*i+8); //가장 오른쪽에 위치한 offset 
-            printf("after offset : %ld\n",offset_return);
+            pread(fd,&offset,8,112+16*i+8); //가장 오른쪽에 위치한 offset 
+            printf("after offset : %ld\n",offset);
           }
      }
-
-    return offset_return;
+*/
+    return offset;
 }
 
 
@@ -126,11 +125,10 @@ int64_t find_leafpage_offset(int start_offset,int64_t key) //internal page
     printf("is leaf :%d\n",isleaf(first_offset));
     while(isleaf(first_offset)!=1) //root에서 부터 internal page들을 거쳐 leaf에 도달하는 반복문
         {
-                 printf("first : %ld\n",first_offset);
+    //             printf("in\n");
                  second_offset=find_next_offset_of_internal(first_offset,key);
                  first_offset= second_offset;
-                 printf("second : %ld\n",second_offset);
-                 break;
+      //           printf("is leaf :%d\n",isleaf(first_offset));
         }
     return first_offset;
 }
@@ -321,7 +319,6 @@ int insert_internal(int64_t leftpage_offset,int64_t rightpage_offset,int64_t key
         int i = 1;
         set_rootpage_offset(new_internal_offset); //root설정
         set_parent_offset(leftpage_offset,new_internal_offset); //해당 internal페이지를 parent로 설정
-        printf("left : %ld  right : %ld\n", leftpage_offset,rightpage_offset);
         set_parent_offset(rightpage_offset,new_internal_offset);
         pwrite(fd,&leftpage_offset,8,new_internal_offset+120);  //왼쪽 leaf 오프셋
         pwrite(fd,&key,8,new_internal_offset+128);  //key
@@ -418,9 +415,9 @@ int64_t split_leaf(int64_t leafoffset,int64_t insert_key,char* value)
         }
     } 
     for(int p=0;p<leaf_degree;p++) printf("%d== %ld, %s\n",p+1,tmp_array[p].key,tmp_array[p].value);
-    for(int l= leaf_degree/2; l<leaf_degree;l++) pwrite(fd,&tmp_array[l],128,new_sibling_leafpage_offset+128+(l-(leaf_degree/2))*128);
-    for(int j=leaf_degree/2+1;j<leaf_degree-1;j++)  pwrite(fd,&init,128,leafoffset+128+j*128);
-    for(int t=1;t<leaf_degree/2+1;t++) pwrite(fd,&tmp_array[t],128,leafoffset+128+t*128);
+    for(int l= 16; l<leaf_degree;l++) pwrite(fd,&tmp_array[l],128,new_sibling_leafpage_offset+128+(l-16)*128);
+    for(int j=17;j<leaf_degree-1;j++)  pwrite(fd,&init,128,leafoffset+128+j*128);
+    for(int t=1;t<17;t++) pwrite(fd,&tmp_array[t],128,leafoffset+128+t*128);
 
 
     pread(fd,&tmp_next_sibling,8,leafoffset+120);//left가 가르키고 있던 sibling offset
@@ -489,26 +486,4 @@ void print_leaf()
         now = next;
         pread(fd,&next,8,now+120);
     }
-}
-
-void page_layout()
-{
-    int64_t number_of_pages;
-    pread(fd,&number_of_pages,8,16);
-    for(int i=1;i<=number_of_pages;i++)
-    {
-        if(number_of_keys(i*4096)==0) printf("[%d] %d : freepage\n",i,i*4096);
-        else
-        {
-            if(isleaf(i*4096)==1)
-            {
-                printf("[%d] %d : leafpage\n",i,i*4096);    
-            }
-            else
-            {
-                printf("[%d] %d : internalpage\n",i,i*4096);
-            }
-        }
-    }
-
 }   
